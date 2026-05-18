@@ -52,10 +52,29 @@ function App() {
         return { quantity: 1, unit: '', name: text };
     };
 
+    // limiting ingredient logic
+    // calculates maximum possible scale based on limiting ingredient
+    const optimizeForPantry = (item, userAmount) => {
+        if (item.quantity > 0) {
+            const maxForThisIngredient = userAmount / item.quantity;
+            
+            const newConstraints = { 
+                ...constraints, 
+                [item.name]: maxForThisIngredient 
+            };
+            
+            setConstraints(newConstraints);
+
+            const lowestScale = Math.min(...Object.values(newConstraints));
+            setMultiplier(lowestScale);
+        }
+    };
+  
     const handleScrape = async () => {
         if (!recipeURL) return alert("Please paste a URL first! 🥧");
         setLoadingMessage('Connecting to kitchen... 🔍');
-
+        setConstraints({});
+        
         try {
             // fetch HTML using proxy to avoid CORS errors
             const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(recipeURL);
