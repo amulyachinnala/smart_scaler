@@ -74,7 +74,7 @@ function App() {
         if (!recipeURL) return alert("Please paste a URL first! 🥧");
         setLoadingMessage('Connecting to kitchen... 🔍');
         setConstraints({});
-        
+
         try {
             // fetch HTML using proxy to avoid CORS errors
             const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(recipeURL);
@@ -138,6 +138,62 @@ function App() {
             setLoadingMessage('');
         }
     };
+
+    // UI
+    const styles = {
+        container: { padding: '40px 20px', maxWidth: '650px', margin: 'auto', backgroundColor: '#FFF9F5', minHeight: '100vh', color: '#5D4037', fontFamily: 'Arial, sans-serif' },
+        card: { backgroundColor: '#FFFFFF', padding: '30px', borderRadius: '25px', boxShadow: '0 10px 25px rgba(220, 190, 180, 0.3)', border: '2px solid #F3E5F5' },
+        input: { width: '100%', padding: '12px', borderRadius: '15px', border: '2px solid #FFECB3', marginBottom: '10px', boxSizing: 'border-box' },
+        button: { backgroundColor: '#D81B60', color: 'white', border: 'none', padding: '15px', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', width: '100%' },
+        row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 10px', borderBottom: '1px solid #FCE4EC', transition: '0.3s' }
+    };
+
+    return (
+        <div style={styles.container}>
+        <div style={styles.card}>
+            <h1 style={{ textAlign: 'center', color: '#D81B60' }}>🥐 Scone Scaler</h1>
+            
+            <section style={{ marginBottom: '30px' }}>
+            <input type="text" placeholder="Paste recipe URL..." value={recipeURL} onChange={(e) => setRecipeURL(e.target.value)} style={styles.input} />
+            <button onClick={handleScrape} disabled={!!loadingMessage} style={styles.button}>
+                {loadingMessage ? loadingMessage : 'Import Recipe ✨'}
+            </button>
+            </section>
+
+            <section style={{ marginBottom: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Current Scale:</span>
+                <strong>{multiplier.toFixed(2)}x</strong>
+            </div>
+            <input type="range" min="0.1" max="4" step="0.1" value={multiplier} onChange={(e) => setMultiplier(parseFloat(e.target.value))} style={{ width: '100%', accentColor: '#D81B60' }} />
+            </section>
+
+            <h3>Ingredients:</h3>
+            {ingredients.map((item, index) => {
+            // Visual feedback for the limiting ingredient
+            const isLimiting = constraints[item.name] === multiplier && Object.keys(constraints).length > 0;
+            
+            return (
+                <div key={index} style={{ ...styles.row, backgroundColor: isLimiting ? '#FFF3E0' : 'transparent' }}>
+                <span style={{ flex: 1 }}>
+                    <strong style={{ color: '#D81B60' }}>{(item.quantity * multiplier).toFixed(2)} {item.unit}</strong> {item.name}
+                    {isLimiting && <div style={{ fontSize: '0.65rem', color: '#E65100', fontWeight: 'bold' }}>LIMITING FACTOR ⚠️</div>}
+                </span>
+                <button 
+                    onClick={() => {
+                    const val = prompt(`How much ${item.name} (${item.unit}) do you have in stock?`);
+                    if (val) optimizeForPantry(item, parseFloat(val));
+                    }} 
+                    style={{ fontSize: '0.7rem', backgroundColor: '#FFF', borderRadius: '8px', padding: '6px 10px', border: '1px solid #FFECB3', cursor: 'pointer' }}
+                >
+                    Stock 🧺
+                </button>
+                </div>
+            );
+            })}
+        </div>
+        </div>
+    );
 }
 
 export default App;
