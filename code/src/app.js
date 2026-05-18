@@ -13,6 +13,33 @@ function App() {
     ]);
     const [constraints, setConstraints] = useState({});
 
+    // helper: AI refinement logic
+    const refineWithAI = async (rawText) => {
+        const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+        if (!apiKey) return null;
+
+        try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+            model: "gpt-3.5-turbo",
+            messages: [{
+                role: "system", 
+                content: "Convert recipe ingredient text into a JSON object with keys: quantity (number), unit (string), and name (string). Convert all fractions to decimals. If no quantity is found, use 1."
+            }, {
+                role: "user", 
+                content: rawText
+            }],
+            temperature: 0
+            },
+            { headers: { 'Authorization': `Bearer ${apiKey}` } }
+        );
+        return JSON.parse(response.data.choices[0].message.content);
+        } catch (error) {
+            return null;
+        }
+    };
+
     const parseIngredientLocal = (text) => {
         const match = text.match(/^(\d+\/?\d*)\s*(\w+)?\s*(.*)$/);
         if (match) {
@@ -58,12 +85,7 @@ function App() {
                 }
             }
 
-            if (rawStrings.length > 0) {
-                const parsed = rawStrings.map(text => parseIngredientLocal(text));
-                setIngredients(parsed);
-                setMultiplier(1);
-                setConstraints({}); 
-            } else if (rawStrings.length === 0) {
+            if (rawStrings.length === 0) {
                 setLoadingMessage('Scanning page elements... 🖥️');
                 
                 // target common class names used by popular recipe plugins
@@ -75,6 +97,21 @@ function App() {
                         rawStrings.push(text);
                     }
                 });
+            }
+
+            if (rawStrings.length > 0) {
+                setLoadingMessage('Refining measurements with AI... ✨');
+                const finalResults = await Promise.all(rawStrings.map(async (text) => {
+                // Broad trigger for slashes, mixed numbers, or special symbols
+                if (text.match(/\//) || text.match(/[¼½¾⅓⅔⅛⅜⅝⅞]/) || text.match(/\d+\s+\d+/)) {
+                    const aiRes = await refineWithAI(text);
+                    return aiRes ? aiRes : parseIngredientLocal(text);
+                }
+                return parseIngredientLocal(text);
+                }));
+
+                setIngredients(finalResults);
+                setMultiplier(1);
             }
         } catch (error) {
             alert("Failed to fetch the recipe.");
