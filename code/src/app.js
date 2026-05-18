@@ -24,7 +24,7 @@ function App() {
         }
         return { quantity: 1, unit: '', name: text };
     };
-    
+
     const handleScrape = async () => {
         if (!recipeURL) return alert("Please paste a URL first! 🥧");
         setLoadingMessage('Connecting to kitchen... 🔍');
@@ -63,8 +63,18 @@ function App() {
                 setIngredients(parsed);
                 setMultiplier(1);
                 setConstraints({}); 
-            } else {
-                alert("Metadata not found on this site.");
+            } else if (rawStrings.length === 0) {
+                setLoadingMessage('Scanning page elements... 🖥️');
+                
+                // target common class names used by popular recipe plugins
+                $('.recipe-ingredients li, .wprm-recipe-ingredient, .ingredients-item, .entry-content ul li').each((i, el) => {
+                    const text = $(el).text().replace(/\s+/g, ' ').trim();
+                    
+                    // add if it starts with a number
+                    if (text.match(/^\d/)) {
+                        rawStrings.push(text);
+                    }
+                });
             }
         } catch (error) {
             alert("Failed to fetch the recipe.");
